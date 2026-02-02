@@ -1,0 +1,51 @@
+# --- Android Studio / IntelliJ ---
+*.iml
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/libraries
+.idea/caches
+# Dacă vrei să nu partajezi setările IDE-ului deloc, poți decomenta linia de mai jos:
+# .idea/
+
+# --- Gradle Files ---
+.gradle/
+build/
+
+# --- Local Configuration (FOARTE IMPORTANT) ---
+# Acest fișier conține calea către SDK-ul tău local și nu trebuie să ajungă pe GitHub
+local.properties
+
+# --- Build Artifacts (Nu vrem fișierele compilate pe git) ---
+/app/build/
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+
+# --- Android Profiling ---
+*.hprof
+*.aprof
+
+# --- Keystore Files (SECURITATE MAXIMĂ) ---
+# Nu urca niciodată cheile de semnare pe GitHub!
+*.jks
+*.keystore
+*.pem
+*.p12
+*.key
+
+# --- Google Services (Opțional) ---
+# Dacă folosești Firebase, de obicei google-services.json nu se pune pe repo public
+# google-services.json
+
+# --- OS Specific ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
