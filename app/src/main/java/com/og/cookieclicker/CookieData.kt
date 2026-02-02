@@ -1,12 +1,14 @@
 package com.og.cookieclicker
 
+import PassiveBuilding
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import kotlin.math.floor
 
 data object CookieData {
-    var score by mutableStateOf(0.0)
+    //  Clicker Values
+    var score by mutableStateOf(1e9)
     var clickStrength by mutableStateOf(1.0)
     private var lastClickStength = 1.0
     var upgradeStrengthCost by mutableStateOf(10.0)
@@ -21,37 +23,57 @@ data object CookieData {
         clickStrength = nextStrength
     }
 
+    // Experiment
+    val experimentCost = 1e10
 
-    // GRANDMA
-    var upgradeGrandmaCost by mutableStateOf(100.0)
-    var numberOfGrandmas by mutableStateOf(0.0)
-    private val cookiesPerGrandma = 1.0
-    val cookiesByGrandmas
-        get() = numberOfGrandmas * cookiesPerGrandma
-    fun upgradeGrandmas () {
-        if (upgradeGrandmaCost > score)
-            return
-        score -= upgradeGrandmaCost
-        if (numberOfGrandmas == 0.0) numberOfGrandmas = 1.0 else numberOfGrandmas *= 2
-        upgradeGrandmaCost *= 2.0
+    // PASSIVE BUILDINGS
+    val buildings = listOf(
+        PassiveBuilding(
+            id = "grandma",
+            name = "Grandma",
+            description = "Hire a grandma to bake cookies.",
+            imageRes = R.drawable.grandma,
+            initialCost = 50.0,
+            baseProduction = 1.0,
+            costMultiplier = 1.15
+        ),
+        PassiveBuilding(
+            id = "bakery",
+            name = "Bakery",
+            description = "Build a bakery for mass production.",
+            imageRes = R.drawable.bakery,
+            initialCost = 750.0,
+            baseProduction = 10.0,
+            costMultiplier = 1.15
+        ),
+        PassiveBuilding(
+            id = "factory",
+            name = "Factory",
+            description = "Industrial cookie production.",
+            imageRes = R.drawable.factory,
+            initialCost = 15000.0,
+            baseProduction = 350.0,
+            costMultiplier = 1.15
+        ),
+        PassiveBuilding(
+            id = "moonBase",
+            name = "Moon Base",
+            description = "Lunar cookie mining operation.",
+            imageRes = R.drawable.moon_base,
+            initialCost = 500000.0,
+            baseProduction = 15000.0,
+            costMultiplier = 1.15
+        )
+    )
+
+    fun buyBuilding(building: PassiveBuilding) {
+        if (score >= building.cost) {
+
+            score -= building.cost
+
+            building.performUpgrade()
+        }
     }
-
-    // Bakery
-    var upgradeBakeryCost by mutableStateOf(1000.0)
-    var numberOfBakeries by mutableStateOf(0.0)
-    private val cookiesPerBakery = 30.0
-    val cookiesByBakery
-        get() = numberOfBakeries * cookiesPerBakery
-    fun upgrabeBakery () {
-        if (upgradeBakeryCost > score)
-            return
-        score -= upgradeBakeryCost
-        if (numberOfBakeries == 0.0) numberOfBakeries = 1.0 else numberOfBakeries *= 2
-        upgradeBakeryCost *= 2.1
-    }
-
-
-
 
     fun producePassiveCookies(updateFrequencyMs: Long) {
         val totalPassivePerSecond =  CookieData.getPassiveCookiesCount()
@@ -59,11 +81,20 @@ data object CookieData {
         score += passivePerTick
     }
 
-    fun getPassiveCookiesCount() : Double {
-        return cookiesByGrandmas + cookiesByBakery
+    fun resetGame() {
+        score = 0.0
+        clickStrength = 1.0
+        upgradeStrengthCost = 10.0
+        // reset cladiri
+        buildings.forEach {
+            it.count = 0.0
+            it.cost = it.initialCost
+        }
     }
 
-
+    fun getPassiveCookiesCount() : Double {
+        return buildings.sumOf { it.totalProduction }
+    }
 
 
 

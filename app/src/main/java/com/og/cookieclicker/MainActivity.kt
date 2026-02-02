@@ -18,11 +18,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,6 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -42,11 +46,14 @@ import androidx.navigation.compose.rememberNavController
 import com.og.cookieclicker.ui.theme.CookieClickerTheme
 import androidx.navigation.compose.composable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+val waitTimeBeforeEnd = 1000L
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        SoundPlayer.playBuySound(this)
+        SoundPlayer.init(this)
         enableEdgeToEdge()
         setContent {
             CookieClickerTheme {
@@ -68,7 +75,24 @@ class MainActivity : ComponentActivity() {
 
                         // Ruta 2
                         composable("game_screen") {
-                            CookieApp()
+                            val scope = rememberCoroutineScope()
+                            CookieApp(onEndReached = {
+                                scope.launch {
+                                    delay(waitTimeBeforeEnd)
+                                    navController.navigate("end_screen")
+                                }
+                            })
+                        }
+
+                        // Ruta 3
+                        composable("end_screen") {
+                            EndScreen(onResetClicked = {
+                                CookieData.resetGame()
+                                navController.navigate("menu_screen") {
+                                    // curata stiva sa nu te poti intoarce cu "back button"
+                                    popUpTo("menu_screen") { inclusive = true }
+                                }
+                            })
                         }
                     }
 
@@ -80,15 +104,39 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun CookieApp(modifier: Modifier = Modifier) {
+fun CookieApp(onEndReached: () -> Unit, modifier: Modifier = Modifier) {
     val updateFrequencyMs = 50L
     val view = LocalView.current
+    val context = LocalContext.current
 
 
     LaunchedEffect(Unit) {
+        SoundPlayer.startGameLoop(context)
         while (true) {
             delay(updateFrequencyMs)
             CookieData.producePassiveCookies(updateFrequencyMs)
+
+            // Calcule Volum
+            val targetScore = CookieData.experimentCost
+            val currentScore = CookieData.score
+            val threshold = targetScore / 2
+
+            val volume = if (currentScore < threshold) {
+                0f
+            } else {
+                // Procentul intre threshold si targetScore
+                ((currentScore - threshold) / (targetScore - threshold)).toFloat()
+            }
+
+            // aplica volumul
+            SoundPlayer.updateGameLoopVolume(volume)
+        }
+    }
+
+    // oprire loop cand se paraseste ecranul
+    DisposableEffect(Unit) {
+        onDispose {
+            SoundPlayer.stopGameLoop()
         }
     }
 
@@ -129,7 +177,7 @@ fun CookieApp(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // --- UPGRADES ---
+        // --- CLICKER UPGRADE ---
         item {
             Upgrade(
                 Modifier, R.drawable.bite,
@@ -142,32 +190,81 @@ fun CookieApp(modifier: Modifier = Modifier) {
                 upgradeFunction = CookieData::upgradeStrength
             )
         }
-        item {
+        // --- UPGRADE PASSIVE ---
+        items(CookieData.buildings) { building ->
             Upgrade(
-                Modifier, R.drawable.grandma,
-                imageDescription = "Grandma",
-                title = "Grandma",
-                description = "Hire a grandma to make cookies!",
-                upgradeCost = CookieData.upgradeGrandmaCost,
-                currentValue = CookieData.cookiesByGrandmas.toString() + " Cookies/s",
-                canAfford = CookieData.score >= CookieData.upgradeGrandmaCost,
-                upgradeFunction = CookieData::upgradeGrandmas
+                modifier = Modifier,
+                imageId = building.imageRes,
+                imageDescription = building.name,
+                title = building.name,
+                description = building.description,
+                upgradeCost = building.cost,
+                currentValue = "%.1f /s".format(building.totalProduction),
+                canAfford = CookieData.score >= building.cost,
+                upgradeFunction = { CookieData.buyBuilding(building) }
             )
         }
+
+        // --- END GAME ---
         item {
             Upgrade(
-                Modifier, R.drawable.bakery,
-                imageDescription = "Bakery",
-                title = "Bakery",
-                description = "Build a bakery!",
-                upgradeCost = CookieData.upgradeBakeryCost,
-                currentValue = CookieData.cookiesByBakery.toString() + " Cookies/s",
-                canAfford = CookieData.score >= CookieData.upgradeBakeryCost,
-                upgradeFunction = CookieData::upgrabeBakery
+                Modifier,R.drawable.experiment,
+                imageDescription = "Experiment",
+                title = "Breakthrough Experiment?",
+                description = "Scientists are close to a breakthrough in Cookie Technology.",
+                upgradeCost = CookieData.experimentCost,
+                currentValue = "???",
+                canAfford = CookieData.score >= CookieData.experimentCost,
+                upgradeFunction = {
+                    if (CookieData.score >= CookieData.experimentCost) {
+                        onEndReached()
+                    }
+                }
             )
         }
     }
 }
+
+@Composable
+fun EndScreen(onResetClicked: () -> Unit) {
+    val context = LocalContext.current
+    // play doar o data cand se intra in ecran
+    LaunchedEffect(Unit) {
+        SoundPlayer.playEndMusic(context)
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Image(
+            painter = painterResource(R.drawable.abstract_end),
+            contentDescription = "The End",
+            modifier = Modifier
+                .size(400.dp)
+                .padding(bottom = 24.dp)
+        )
+
+        Text(
+            text = "Everything became shapes and cookies...",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(onClick = {
+            SoundPlayer.stopEndMusic()
+            onResetClicked()
+        })  {
+            Text(text = "RESET GAME")
+        }
+    }
+}
+
 
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier, onPlayClicked: () -> Unit) {
