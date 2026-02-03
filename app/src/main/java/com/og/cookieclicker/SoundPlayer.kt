@@ -4,19 +4,21 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.SoundPool
+import android.util.Log
 
 object SoundPlayer {
     private var soundPool: SoundPool? = null
 
     // Variabile pentru controlul spam-ului
     private var lastPlayTime: Long = 0
-    private const val MIN_DELAY_BETWEEN_SOUNDS = 70L // Milisecunde (aprox 14 sunete/secunda max)
+    private const val MIN_DELAY_BETWEEN_SOUNDS = 50L
 
     private var gameLoopPlayer: MediaPlayer? = null
     private var buySoundId: Int = -1
     private var isLoaded: Boolean = false
     private var musicPlayer: MediaPlayer? = null
 
+    private var lastStreamId: Int = 0
     fun init(context: Context) {
         if (soundPool == null) {
             buildSoundPlayer(context)
@@ -29,7 +31,7 @@ object SoundPlayer {
             .build()
 
         soundPool = SoundPool.Builder()
-            .setMaxStreams(2)
+            .setMaxStreams(1)
             .setAudioAttributes(audioAttributes)
             .build()
 
@@ -49,11 +51,15 @@ object SoundPlayer {
         }
 
         if (isLoaded && buySoundId != -1) {
-            // Actualizăm timpul
             lastPlayTime = currentTime
 
             val randomRate = (95..105).random() / 100f
-            soundPool?.play(buySoundId, 0.9f, 0.9f, 1, 0, randomRate)
+
+            try {
+                soundPool?.play(buySoundId, 0.6f, 0.6f, 1, 0, randomRate)
+            } catch (e: Exception) {
+                Log.e("SoundPlayer", "Error playing sound: ${e.message}")
+            }
         }
     }
 

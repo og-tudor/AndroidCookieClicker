@@ -152,14 +152,14 @@ fun CookieApp(onEndReached: () -> Unit, modifier: Modifier = Modifier) {
                 modifier = Modifier.size(300.dp)
                     .clickable {
                         view.playSoundEffect(SoundEffectConstants.CLICK)
-                        CookieData.score += CookieData.clickStrength
+                        CookieData.score += CookieData.totalClickStrength
                     }
             )
             Spacer(modifier = Modifier.height(16.dp))
         }
         item {
             Text(
-                text = "Cookies: ${"%.1f".format(CookieData.score)}",
+                text = "Cookies: ${CookieData.formatNumber(CookieData.score)}",
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 30.sp,
                 modifier = Modifier.padding(8.dp)
@@ -169,7 +169,7 @@ fun CookieApp(onEndReached: () -> Unit, modifier: Modifier = Modifier) {
         }
         item {
             Text(
-                text = "Passive Income: ${"%.1f".format(CookieData.getPassiveCookiesCount())}/s",
+                text = "Passive Income: ${CookieData.formatNumber(CookieData.getPassiveCookiesCount())}/s",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 modifier = Modifier.padding(8.dp)
@@ -185,7 +185,7 @@ fun CookieApp(onEndReached: () -> Unit, modifier: Modifier = Modifier) {
                 title = "Increase bite",
                 description = "Increases click power.",
                 upgradeCost = CookieData.upgradeStrengthCost,
-                currentValue = CookieData.clickStrength.toString() + " Cookies",
+                currentValue = CookieData.formatNumber(CookieData.totalClickStrength) + " Click",
                 canAfford = CookieData.score >= CookieData.upgradeStrengthCost,
                 upgradeFunction = CookieData::upgradeStrength
             )
@@ -199,7 +199,7 @@ fun CookieApp(onEndReached: () -> Unit, modifier: Modifier = Modifier) {
                 title = building.name,
                 description = building.description,
                 upgradeCost = building.cost,
-                currentValue = "%.1f /s".format(building.totalProduction),
+                currentValue = "${CookieData.formatNumber(building.totalProduction)} /s",
                 canAfford = CookieData.score >= building.cost,
                 upgradeFunction = { CookieData.buyBuilding(building) }
             )
@@ -345,7 +345,7 @@ fun Upgrade(
                 fontSize = 20.sp
             )
             Text(
-                text = "%.1f".format(upgradeCost),
+                text = CookieData.formatNumber(upgradeCost),
                 fontWeight = FontWeight.Bold,
                 color = Color.hsl(49f , 1F,  0.29f),
                 fontSize = 15.sp
