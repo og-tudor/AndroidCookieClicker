@@ -8,7 +8,7 @@ import kotlin.math.floor
 
 data object CookieData {
     //  Clicker Values
-    var score by mutableStateOf(1e8)
+    var score by mutableStateOf(0.0)
     var clickStrength by mutableStateOf(1.0)
     private var lastClickStength = 1.0
     var baseClickStrength by mutableStateOf(1.0)
@@ -32,6 +32,14 @@ data object CookieData {
         }
     }
 
+    fun getCookieImageState(): Int {
+        return when {
+            score < 1e6 -> 0
+            score < 1e8 -> 1
+            else -> 2
+        }
+    }
+
     // Experiment
     val experimentCost = 1e9
 
@@ -41,10 +49,14 @@ data object CookieData {
             id = "grandma",
             name = "Grandma",
             description = "Hire a grandma to bake cookies.",
-            imageRes = R.drawable.grandma,
+            imageRes = R.drawable.grandma_cookies_sheet,
             initialCost = 50.0,
             baseProduction = 1.0,
-            costMultiplier = 1.15
+            costMultiplier = 1.15,
+            isSpriteSheet = true,
+            columns = 4,
+            rows = 1,
+            frameDuration = 150L
         ),
         PassiveBuilding(
             id = "bakery",

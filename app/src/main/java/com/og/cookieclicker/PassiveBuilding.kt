@@ -10,6 +10,12 @@ class PassiveBuilding(
     val initialCost: Double,
     val baseProduction: Double,
     val costMultiplier: Double,
+
+    // Variabile SpriteSheet
+    val isSpriteSheet: Boolean = false,
+    val columns: Int = 1,
+    val rows: Int = 1,
+    val frameDuration: Long = 100L
 ) {
     var cost by mutableStateOf(initialCost)
     var count by mutableStateOf(0.0)

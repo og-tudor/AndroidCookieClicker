@@ -19,13 +19,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -139,6 +144,10 @@ fun CookieApp(onEndReached: () -> Unit, modifier: Modifier = Modifier) {
             SoundPlayer.stopGameLoop()
         }
     }
+    var clickTrigger by remember { mutableLongStateOf(0L) }
+    val scrollState = rememberScrollState()
+
+
 
     LazyColumn (
         modifier = modifier.fillMaxSize(),
@@ -146,15 +155,19 @@ fun CookieApp(onEndReached: () -> Unit, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item {
-            Image(
-                painter = painterResource(R.drawable.coockie),
-                contentDescription = "Cookie",
-                modifier = Modifier.size(300.dp)
+            SingleSprite(
+                imageRes = R.drawable.cookie_sheet,
+                frameIndex = CookieData.getCookieImageState(),
+                nrRows = 1,
+                nrColumns = 3,
+                modifier = Modifier
+                    .size(300.dp)
                     .clickable {
                         view.playSoundEffect(SoundEffectConstants.CLICK)
                         CookieData.score += CookieData.totalClickStrength
                     }
             )
+
             Spacer(modifier = Modifier.height(16.dp))
         }
         item {
@@ -180,14 +193,19 @@ fun CookieApp(onEndReached: () -> Unit, modifier: Modifier = Modifier) {
         // --- CLICKER UPGRADE ---
         item {
             Upgrade(
-                Modifier, R.drawable.bite,
+                Modifier,
+                R.drawable.cookie_bite_sheet,
                 imageDescription = "Bite",
                 title = "Increase bite",
                 description = "Increases click power.",
                 upgradeCost = CookieData.upgradeStrengthCost,
                 currentValue = CookieData.formatNumber(CookieData.totalClickStrength) + " Click",
                 canAfford = CookieData.score >= CookieData.upgradeStrengthCost,
-                upgradeFunction = CookieData::upgradeStrength
+                upgradeFunction = CookieData::upgradeStrength,
+                spriteSheet = true,
+                nrRows = 1,
+                nrColumns = 4,
+                frameDurationMs = 150L
             )
         }
         // --- UPGRADE PASSIVE ---
@@ -201,7 +219,11 @@ fun CookieApp(onEndReached: () -> Unit, modifier: Modifier = Modifier) {
                 upgradeCost = building.cost,
                 currentValue = "${CookieData.formatNumber(building.totalProduction)} /s",
                 canAfford = CookieData.score >= building.cost,
-                upgradeFunction = { CookieData.buyBuilding(building) }
+                upgradeFunction = { CookieData.buyBuilding(building) },
+                spriteSheet = building.isSpriteSheet,
+                nrColumns = building.columns,
+                nrRows = building.rows,
+                frameDurationMs = building.frameDuration
             )
         }
 
@@ -285,31 +307,60 @@ fun HomeScreen(modifier: Modifier = Modifier, onPlayClicked: () -> Unit) {
 
 @Composable
 fun Upgrade(
-    modifier: Modifier = Modifier, imageId: Int, imageDescription: String,
-    title: String, description: String, upgradeCost: Double, currentValue: String,
+    modifier: Modifier = Modifier,
+    imageId: Int,
+    imageDescription: String,
+    spriteSheet: Boolean = false,
+    nrRows: Int = 1,
+    nrColumns: Int = 3,
+    idleFrame: Int = 0,
+    frameDurationMs:Long = 100L,
+    loop: Boolean = false,
+    title: String,
+    description: String,
+    upgradeCost: Double,
+    currentValue: String,
     canAfford: Boolean,
     upgradeFunction: () -> Unit
 
 ) {
     val alpha = if (canAfford) 1f else 0.5f
     val context = LocalContext.current
+    var animationTrigger by remember { mutableLongStateOf(0L) }
+
     Row(
         modifier = modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp, bottom = 16.dp)
                     .clickable {
-                        if (canAfford)
-                            SoundPlayer.playBuySound(context)
+                        if (!canAfford) return@clickable
+
+                        SoundPlayer.playBuySound(context)
+                        animationTrigger = System.currentTimeMillis()
 
                         upgradeFunction()
                     }
                     .graphicsLayer(alpha = alpha)
     ) {
-        Image(
-            painter = painterResource(imageId),
-            contentDescription = "",
-            modifier = Modifier.size(100.dp)
-        )
+        if (spriteSheet) {
+            AnimatedSprite(
+                imageRes = imageId,
+                nrRows = nrRows,
+                nrColumns = nrColumns,
+                idleFrame = idleFrame,
+                loop = loop,
+                trigger = animationTrigger,
+                frameDurationMs = frameDurationMs,
+                modifier = Modifier.size(100.dp)
+            )
+        } else {
+            Image(
+                painter = painterResource(imageId),
+                contentDescription = imageDescription,
+                modifier = Modifier.size(100.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
